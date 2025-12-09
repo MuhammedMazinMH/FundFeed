@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Fundraising rounds collection
+    match /fundraising_rounds/{roundId} {
+      // Anyone can read fundraising rounds
+      allow read: if true;
+      
+      // Only authenticated users can create rounds
+      allow create: if request.auth != null;
+      
+      // Only the founder can update or delete their round
+      allow update, delete: if request.auth != null 
+                            && request.auth.uid == resource.data.founderId;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Anyone can read user profiles (for displaying names, etc.)
+      allow read: if true;
+      
+      // Users can only write to their own profile
+      allow write: if request.auth != null 
+                   && request.auth.uid == userId;
+    }
+    
+    // Intro requests collection
+    match /intro_requests/{requestId} {
+      // Users can only read their own intro requests
+      allow read: if request.auth != null 
+                  && request.auth.uid == resource.data.investorId;
+      
+      // Authenticated users can create intro requests
+      allow create: if request.auth != null
+                    && request.resource.data.investorId == request.auth.uid;
+      
+      // No updates or deletes allowed for intro requests
+      allow update, delete: if false;
+    }
+  }
+}
