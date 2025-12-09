@@ -1,22 +1,22 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User as FirebaseUser } from 'firebase/auth';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 import {
   signInWithEmail,
   signUpWithEmail,
   signInWithGoogle,
   signOut as authSignOut,
   onAuthStateChange,
-  isFirebaseConfigured,
+  isAuthConfigured,
 } from '@/lib/auth';
 
 interface AuthContextType {
-  user: FirebaseUser | null;
+  user: SupabaseUser | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<FirebaseUser>;
-  signUp: (email: string, password: string) => Promise<FirebaseUser>;
-  signInWithGoogle: () => Promise<FirebaseUser>;
+  signIn: (email: string, password: string) => Promise<SupabaseUser | null>;
+  signUp: (email: string, password: string) => Promise<SupabaseUser | null>;
+  signInWithGoogle: () => Promise<any>;
   signOut: () => Promise<void>;
 }
 
@@ -35,24 +35,21 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if Firebase is configured
-    if (!isFirebaseConfigured()) {
-      console.warn('Firebase is not configured. Auth features will be disabled.');
+    if (!isAuthConfigured()) {
+      console.warn('Supabase is not configured. Auth features will be disabled.');
       setLoading(false);
       return;
     }
 
-    // Subscribe to auth state changes
     const unsubscribe = onAuthStateChange((user) => {
       setUser(user);
       setLoading(false);
     });
 
-    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, []);
 
@@ -67,8 +64,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signInWithGoogleProvider = async () => {
-    const user = await signInWithGoogle();
-    return user;
+    const data = await signInWithGoogle();
+    return data;
   };
 
   const signOut = async () => {

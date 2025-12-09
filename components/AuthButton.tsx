@@ -54,10 +54,10 @@ export const AuthButton: React.FC<AuthButtonProps> = ({ variant = 'default' }) =
       <div className="flex items-center gap-3">
         {variant === 'default' && (
           <div className="flex items-center gap-2">
-            {user.photoURL ? (
+            {user.user_metadata?.avatar_url ? (
               <Image
-                src={user.photoURL}
-                alt={user.displayName || 'User'}
+                src={user.user_metadata.avatar_url}
+                alt={user.user_metadata?.full_name || 'User'}
                 width={32}
                 height={32}
                 className="h-8 w-8 rounded-full"
@@ -65,12 +65,12 @@ export const AuthButton: React.FC<AuthButtonProps> = ({ variant = 'default' }) =
             ) : (
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-300 dark:bg-gray-700">
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {user.displayName?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
+                  {user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
                 </span>
               </div>
             )}
             <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-              {user.displayName || user.email}
+              {user.user_metadata?.full_name || user.email}
             </span>
           </div>
         )}

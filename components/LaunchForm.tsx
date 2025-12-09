@@ -144,7 +144,7 @@ export const LaunchForm: React.FC<LaunchFormProps> = ({ onSuccess }) => {
         currency: formData.currency,
         description: formData.description.trim(),
         deckUrl,
-        founderId: user.uid,
+        founderId: user.id,
       });
 
       // Trigger confetti animation

@@ -29,13 +29,13 @@ export default function Home() {
 
         // Fetch user's followed rounds and intro requests if authenticated
         if (user) {
-          const userProfile = await getUserProfile(user.uid);
+          const userProfile = await getUserProfile(user.id);
           if (userProfile) {
             setFollowedRounds(userProfile.followedRounds || []);
           }
-          
+
           // Fetch user's intro requests
-          const introRequests = await getIntroRequestsForInvestor(user.uid);
+          const introRequests = await getIntroRequestsForInvestor(user.id);
           setRequestedIntros(introRequests.map(req => req.roundId));
         }
       } catch (err) {
@@ -60,10 +60,10 @@ export default function Home() {
       const isCurrentlyFollowing = followedRounds.includes(roundId);
 
       if (isCurrentlyFollowing) {
-        await unfollowRound(user.uid, roundId);
+        await unfollowRound(user.id, roundId);
         setFollowedRounds(prev => prev.filter(id => id !== roundId));
       } else {
-        await followRound(user.uid, roundId);
+        await followRound(user.id, roundId);
         setFollowedRounds(prev => [...prev, roundId]);
       }
     } catch (err) {

@@ -40,7 +40,7 @@ export const RequestIntroButton: React.FC<RequestIntroButtonProps> = ({
         body: JSON.stringify({
           roundId,
           startupName,
-          userId: user.uid,
+          userId: user.id,
         }),
       });
 

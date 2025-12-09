@@ -1,75 +1,80 @@
-// Firebase Authentication helpers
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  signInWithPopup,
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  User as FirebaseUser,
-  Auth,
-} from 'firebase/auth';
-import { auth } from './firebase';
+import { supabase, isSupabaseConfigured } from './supabase';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
-// Check if Firebase is configured
-export const isFirebaseConfigured = (): boolean => {
-  return auth !== null;
+export const isAuthConfigured = (): boolean => {
+  return isSupabaseConfigured();
 };
 
-// Helper to ensure auth is available
-const getAuth = (): Auth => {
-  if (!auth) {
-    console.warn('Firebase Auth is not configured. Please set up your environment variables in .env.local');
-    throw new Error('Firebase Auth is not configured. Please set up your environment variables.');
-  }
-  return auth;
-};
-
-// Sign in with email and password
 export const signInWithEmail = async (email: string, password: string) => {
-  try {
-    const userCredential = await signInWithEmailAndPassword(getAuth(), email, password);
-    return userCredential.user;
-  } catch (error) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) {
     console.error('Error signing in with email:', error);
     throw error;
   }
+
+  return data.user;
 };
 
-// Create account with email and password
 export const signUpWithEmail = async (email: string, password: string) => {
-  try {
-    const userCredential = await createUserWithEmailAndPassword(getAuth(), email, password);
-    return userCredential.user;
-  } catch (error) {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+  });
+
+  if (error) {
     console.error('Error creating account:', error);
     throw error;
   }
+
+  return data.user;
 };
 
-// Sign in with Google OAuth
 export const signInWithGoogle = async () => {
-  try {
-    const provider = new GoogleAuthProvider();
-    const userCredential = await signInWithPopup(getAuth(), provider);
-    return userCredential.user;
-  } catch (error) {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${window.location.origin}/`,
+    },
+  });
+
+  if (error) {
     console.error('Error signing in with Google:', error);
     throw error;
   }
+
+  return data;
 };
 
-// Sign out
 export const signOut = async () => {
-  try {
-    await firebaseSignOut(getAuth());
-  } catch (error) {
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
     console.error('Error signing out:', error);
     throw error;
   }
 };
 
-// Auth state observer
-export const onAuthStateChange = (callback: (user: FirebaseUser | null) => void) => {
-  return onAuthStateChanged(getAuth(), callback);
+export const onAuthStateChange = (callback: (user: SupabaseUser | null) => void) => {
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    (async () => {
+      callback(session?.user ?? null);
+    })();
+  });
+
+  return subscription.unsubscribe;
+};
+
+export const getCurrentUser = async () => {
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (error) {
+    console.error('Error getting current user:', error);
+    return null;
+  }
+
+  return user;
 };

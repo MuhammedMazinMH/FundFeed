@@ -1,5 +1,3 @@
-// TypeScript type definitions for Fundfeed
-
 export interface FundraisingRound {
   id: string;
   companyName: string;
@@ -9,8 +7,8 @@ export interface FundraisingRound {
   description: string;
   deckUrl: string;
   founderId: string;
-  createdAt: any; // Firestore Timestamp
-  updatedAt: any; // Firestore Timestamp
+  createdAt: string;
+  updatedAt: string;
   followerCount: number;
   introRequestCount: number;
 }
@@ -21,7 +19,7 @@ export interface User {
   displayName: string;
   photoUrl?: string;
   role: 'founder' | 'investor' | 'both';
-  createdAt: any; // Firestore Timestamp
+  createdAt: string;
   followedRounds: string[];
 }
 
@@ -31,6 +29,6 @@ export interface IntroRequest {
   roundId: string;
   startupName: string;
   status: 'pending' | 'accepted' | 'declined';
-  createdAt: any; // Firestore Timestamp
+  createdAt: string;
   message?: string;
 }
