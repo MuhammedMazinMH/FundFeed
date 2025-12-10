@@ -111,8 +111,7 @@ export const updateFundraisingRound = async (
 
   dbUpdates.updated_at = new Date().toISOString();
 
-  const { error }: any = await (supabase
-    .from('fundraising_rounds') as any)
+  const { error }: any = await (supabase.from('fundraising_rounds') as any)
     .update(dbUpdates)
     .eq('id', roundId);
 
@@ -135,16 +134,14 @@ export const deleteFundraisingRound = async (roundId: string): Promise<void> => 
 
 export const createOrUpdateUser = async (userId: string, userData: Omit<User, 'id'>): Promise<void> => {
   const supabase = getSupabase();
-  const { error }: any = await supabase
-    .from('users')
-    .upsert({
-      id: userId,
-      email: userData.email,
-      display_name: userData.displayName,
-      photo_url: userData.photoUrl,
-      role: userData.role,
-      followed_rounds: userData.followedRounds,
-    } as any);
+  const { error }: any = await supabase.from('users').upsert({
+    id: userId,
+    email: userData.email,
+    display_name: userData.displayName,
+    photo_url: userData.photoUrl,
+    role: userData.role,
+    followed_rounds: userData.followedRounds,
+  } as any);
 
   if (error) {
     throw error;
@@ -191,10 +188,7 @@ export const updateUserProfile = async (
   if (updates.role) dbUpdates.role = updates.role;
   if (updates.followedRounds) dbUpdates.followed_rounds = updates.followedRounds;
 
-  const { error }: any = await (supabase
-    .from('users') as any)
-    .update(dbUpdates)
-    .eq('id', userId);
+  const { error }: any = await (supabase.from('users') as any).update(dbUpdates).eq('id', userId);
 
   if (error) {
     throw error;
@@ -216,8 +210,7 @@ export const followRound = async (userId: string, roundId: string): Promise<void
   const followedRounds = userData.followed_rounds || [];
 
   if (!followedRounds.includes(roundId)) {
-    const { error: updateUserError }: any = await (supabase
-      .from('users') as any)
+    const { error: updateUserError }: any = await (supabase.from('users') as any)
       .update({ followed_rounds: [...followedRounds, roundId] })
       .eq('id', userId);
 
@@ -235,8 +228,7 @@ export const followRound = async (userId: string, roundId: string): Promise<void
       throw roundError;
     }
 
-    const { error: updateRoundError }: any = await (supabase
-      .from('fundraising_rounds') as any)
+    const { error: updateRoundError }: any = await (supabase.from('fundraising_rounds') as any)
       .update({ follower_count: (roundData.follower_count || 0) + 1 })
       .eq('id', roundId);
 
@@ -261,8 +253,7 @@ export const unfollowRound = async (userId: string, roundId: string): Promise<vo
   const followedRounds = userData.followed_rounds || [];
 
   if (followedRounds.includes(roundId)) {
-    const { error: updateUserError }: any = await (supabase
-      .from('users') as any)
+    const { error: updateUserError }: any = await (supabase.from('users') as any)
       .update({ followed_rounds: followedRounds.filter((id: string) => id !== roundId) })
       .eq('id', userId);
 
@@ -280,8 +271,7 @@ export const unfollowRound = async (userId: string, roundId: string): Promise<vo
       throw roundError;
     }
 
-    const { error: updateRoundError }: any = await (supabase
-      .from('fundraising_rounds') as any)
+    const { error: updateRoundError }: any = await (supabase.from('fundraising_rounds') as any)
       .update({ follower_count: Math.max((roundData.follower_count || 0) - 1, 0) })
       .eq('id', roundId);
 
@@ -335,8 +325,7 @@ export const createIntroRequest = async (
     throw roundError;
   }
 
-  const { error: updateError }: any = await (supabase
-    .from('fundraising_rounds') as any)
+  const { error: updateError }: any = await (supabase.from('fundraising_rounds') as any)
     .update({ intro_request_count: (roundData.intro_request_count || 0) + 1 })
     .eq('id', requestData.roundId);
 
@@ -412,10 +401,7 @@ export const updateIntroRequestStatus = async (
   status: 'pending' | 'accepted' | 'declined'
 ): Promise<void> => {
   const supabase = getSupabase();
-  const { error }: any = await (supabase
-    .from('intro_requests') as any)
-    .update({ status })
-    .eq('id', requestId);
+  const { error }: any = await (supabase.from('intro_requests') as any).update({ status }).eq('id', requestId);
 
   if (error) {
     throw error;

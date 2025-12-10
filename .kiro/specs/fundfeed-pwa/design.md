@@ -2,7 +2,7 @@
 
 ## Overview
 
-Fundfeed is a Progressive Web App built with Next.js 14 (App Router), Firebase, and TypeScript. The architecture follows a modern JAMstack approach with server-side rendering for SEO, client-side interactivity, and Firebase for backend services. The app uses Tailwind CSS for styling with dark mode support, and implements PWA features for installability and offline functionality.
+Fundfeed is a Progressive Web App built with Next.js 14 (App Router), Supabase, and TypeScript. The architecture follows a modern JAMstack approach with server-side rendering for SEO, client-side interactivity, and Supabase for backend services. The app uses Tailwind CSS for styling with dark mode support, and implements PWA features for installability and offline functionality.
 
 ## Architecture
 
@@ -13,16 +13,16 @@ graph TB
     Client[Browser/PWA Client]
     NextJS[Next.js 14 App Router]
     Vercel[Vercel Edge Network]
-    Firebase[Firebase Services]
+    Supabase[Supabase Services]
     
     Client -->|HTTPS| Vercel
     Vercel -->|SSR/API Routes| NextJS
-    NextJS -->|Auth/Data/Storage| Firebase
+    NextJS -->|Auth/Data/Storage| Supabase
     
-    subgraph Firebase Services
-        Auth[Firebase Auth]
-        Firestore[Firestore Database]
-        Storage[Firebase Storage]
+    subgraph Supabase Services
+        Auth[Supabase Auth]
+        Database[PostgreSQL Database]
+        Storage[Supabase Storage]
     end
     
     subgraph Next.js App
@@ -38,9 +38,9 @@ graph TB
 - **Frontend Framework**: Next.js 14 with App Router
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS with dark mode
-- **Authentication**: Firebase Auth (Email/Password, Google OAuth)
-- **Database**: Firestore (NoSQL)
-- **File Storage**: Firebase Storage
+- **Authentication**: Supabase Auth (Email/Password, Google OAuth)
+- **Database**: Supabase (PostgreSQL)
+- **File Storage**: Supabase Storage
 - **Deployment**: Vercel
 - **PWA**: next-pwa plugin with Workbox
 - **Animations**: canvas-confetti library
@@ -67,8 +67,8 @@ fundfeed/
 │   ├── FollowButton.tsx        # Follow/unfollow button
 │   └── RequestIntroButton.tsx  # Request intro button
 ├── lib/
-│   ├── firebase.ts             # Firebase initialization
-│   ├── firestore.ts            # Firestore helpers
+│   ├── supabase.ts             # Supabase initialization
+│   ├── database.ts             # Database helpers
 │   ├── storage.ts              # Storage helpers
 │   └── auth.ts                 # Auth helpers
 ├── contexts/
@@ -80,9 +80,10 @@ fundfeed/
 │   ├── manifest.json           # PWA manifest
 │   ├── icons/                  # App icons
 │   └── sw.js                   # Service worker
+├── supabase/
+│   └── migrations/             # Database migrations
 ├── next.config.js              # Next.js configuration
 ├── tailwind.config.js          # Tailwind configuration
-├── firebase.json               # Firebase configuration
 └── package.json
 ```
 
@@ -183,9 +184,9 @@ interface ThemeContextType {
 
 ## Data Models
 
-### Firestore Collections
+### Database Tables
 
-#### fundraising_rounds Collection
+#### fundraising_rounds Table
 
 ```typescript
 interface FundraisingRound {
@@ -197,18 +198,18 @@ interface FundraisingRound {
   description: string;
   deckUrl: string;
   founderId: string;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt: string;
+  updatedAt: string;
   followerCount: number;
   introRequestCount: number;
 }
 ```
 
 **Indexes:**
-- `createdAt` (descending) - for trending algorithm
-- `followerCount` (descending) - for popularity sorting
+- `created_at` (descending) - for trending algorithm
+- `follower_count` (descending) - for popularity sorting
 
-#### users Collection
+#### users Table
 
 ```typescript
 interface User {
@@ -217,12 +218,12 @@ interface User {
   displayName: string;
   photoUrl?: string;
   role: 'founder' | 'investor' | 'both';
-  createdAt: Timestamp;
+  createdAt: string;
   followedRounds: string[];  // Array of round IDs
 }
 ```
 
-#### intro_requests Collection
+#### intro_requests Table
 
 ```typescript
 interface IntroRequest {
@@ -231,16 +232,16 @@ interface IntroRequest {
   roundId: string;
   startupName: string;
   status: 'pending' | 'accepted' | 'declined';
-  createdAt: Timestamp;
+  createdAt: string;
   message?: string;
 }
 ```
 
 **Indexes:**
-- Composite: `investorId` + `roundId` - for checking existing requests
-- `roundId` (ascending) - for fetching requests per round
+- Composite: `investor_id` + `round_id` - for checking existing requests
+- `round_id` (ascending) - for fetching requests per round
 
-### Firebase Storage Structure
+### Supabase Storage Structure
 
 ```
 /logos/{roundId}/{filename}
@@ -256,7 +257,7 @@ interface IntroRequest {
 **Validates: Requirements 1.2**
 
 ### Property 2: File upload validation
-*For any* file upload attempt, the system must validate both file type and size: logos must be PNG/JPG/WEBP under 5MB, and decks must be PDF under 10MB, rejecting all invalid files before upload to Firebase Storage.
+*For any* file upload attempt, the system must validate both file type and size: logos must be PNG/JPG/WEBP under 5MB, and decks must be PDF under 10MB, rejecting all invalid files before upload to Supabase Storage.
 **Validates: Requirements 2.3, 2.4**
 
 ### Property 3: Authentication requirement for protected actions
@@ -264,11 +265,11 @@ interface IntroRequest {
 **Validates: Requirements 3.2, 4.5, 10.1**
 
 ### Property 4: Intro request idempotency
-*For any* investor and fundraising round combination, submitting multiple intro requests must result in only one stored request in Firestore, with subsequent attempts showing "Intro Requested" status.
+*For any* investor and fundraising round combination, submitting multiple intro requests must result in only one stored request in the database, with subsequent attempts showing "Intro Requested" status.
 **Validates: Requirements 3.5**
 
 ### Property 5: Follow state consistency
-*For any* user and fundraising round, the follow button state (Follow/Following) must accurately reflect whether the round ID exists in the user's followedRounds array in Firestore.
+*For any* user and fundraising round, the follow button state (Follow/Following) must accurately reflect whether the round ID exists in the user's followedRounds array in the database.
 **Validates: Requirements 10.2, 10.3, 10.4, 10.5**
 
 ### Property 6: Theme persistence and restoration
@@ -292,7 +293,7 @@ interface IntroRequest {
 **Validates: Requirements 2.2**
 
 ### Property 11: Intro request data completeness
-*For any* stored intro request in Firestore, the document must contain investor ID, round ID, startup name, status, and timestamp fields.
+*For any* stored intro request in the database, the document must contain investor ID, round ID, startup name, status, and timestamp fields.
 **Validates: Requirements 3.3**
 
 ### Property 12: Trending algorithm sorting
@@ -309,7 +310,7 @@ interface IntroRequest {
    - Show clear error messages for file size/type violations
 
 2. **Authentication Errors**
-   - Handle Firebase Auth errors (wrong password, user not found, etc.)
+   - Handle Supabase Auth errors (wrong password, user not found, etc.)
    - Display user-friendly error messages
    - Provide retry mechanisms
 
@@ -330,8 +331,8 @@ interface IntroRequest {
    - Log errors to console for debugging
    - Sanitize error messages before sending to client
 
-2. **Firebase Errors**
-   - Handle Firestore permission denied errors
+2. **Supabase Errors**
+   - Handle database permission denied errors
    - Catch and handle storage errors
    - Implement exponential backoff for rate limits
 
@@ -355,7 +356,7 @@ Implement React Error Boundaries to catch rendering errors and display fallback 
    - FollowButton displays correct state
 
 2. **Utility Function Tests**
-   - Firebase initialization
+   - Supabase initialization
    - File size validation
    - File type validation
    - Date formatting helpers
@@ -388,7 +389,7 @@ Implement React Error Boundaries to catch rendering errors and display fallback 
 
 4. **Property 4: Intro request idempotency**
    - Generate multiple intro requests for same investor/round pair
-   - Verify only one request is stored in Firestore
+   - Verify only one request is stored in the database
    - **Validates: Requirements 3.5**
 
 5. **Property 5: Follow state consistency**
@@ -428,7 +429,7 @@ Implement React Error Boundaries to catch rendering errors and display fallback 
 
 11. **Property 11: Intro request data completeness**
     - Generate intro requests with random data
-    - Verify stored Firestore documents contain all required fields
+    - Verify stored database records contain all required fields
     - **Validates: Requirements 3.3**
 
 12. **Property 12: Trending algorithm sorting**
@@ -454,7 +455,7 @@ Implement React Error Boundaries to catch rendering errors and display fallback 
 - Run property-based tests with minimum 100 iterations
 - Each property test must include a comment referencing the design document property
 - Format: `// Feature: fundfeed-pwa, Property 1: Trending cards display completeness`
-- Mock Firebase services in unit tests using Firebase emulators
+- Mock Supabase services in unit tests
 - Use test fixtures for consistent test data
 
 ## PWA Implementation
@@ -553,67 +554,88 @@ const triggerConfetti = () => {
 - Non-blocking: runs asynchronously
 - Auto-cleanup after 3 seconds
 
-## Firebase Configuration
+## Supabase Configuration
 
 ### Environment Variables
 
 ```
-NEXT_PUBLIC_FIREBASE_API_KEY=
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
-NEXT_PUBLIC_FIREBASE_APP_ID=
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
-### Security Rules
+### Row Level Security (RLS) Policies
 
-#### Firestore Rules
+#### fundraising_rounds Table
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /fundraising_rounds/{roundId} {
-      allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth.uid == resource.data.founderId;
-    }
-    
-    match /users/{userId} {
-      allow read: if true;
-      allow write: if request.auth.uid == userId;
-    }
-    
-    match /intro_requests/{requestId} {
-      allow read: if request.auth.uid == resource.data.investorId;
-      allow create: if request.auth != null;
-    }
-  }
-}
+```sql
+-- Allow anyone to read
+CREATE POLICY "Anyone can read fundraising rounds" ON fundraising_rounds
+  FOR SELECT USING (true);
+
+-- Allow authenticated users to create
+CREATE POLICY "Authenticated users can create rounds" ON fundraising_rounds
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+-- Allow founders to update/delete their own rounds
+CREATE POLICY "Founders can update their rounds" ON fundraising_rounds
+  FOR UPDATE USING (auth.uid() = founder_id);
+
+CREATE POLICY "Founders can delete their rounds" ON fundraising_rounds
+  FOR DELETE USING (auth.uid() = founder_id);
 ```
 
-#### Storage Rules
+#### users Table
 
-```javascript
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /logos/{roundId}/{filename} {
-      allow read: if true;
-      allow write: if request.auth != null 
-                   && request.resource.size < 5 * 1024 * 1024
-                   && request.resource.contentType.matches('image/.*');
-    }
-    
-    match /decks/{roundId}/{filename} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null 
-                   && request.resource.size < 10 * 1024 * 1024
-                   && request.resource.contentType == 'application/pdf';
-    }
-  }
-}
+```sql
+-- Allow anyone to read
+CREATE POLICY "Anyone can read users" ON users
+  FOR SELECT USING (true);
+
+-- Allow users to manage their own profile
+CREATE POLICY "Users can manage their profile" ON users
+  FOR ALL USING (auth.uid() = id);
+```
+
+#### intro_requests Table
+
+```sql
+-- Allow users to read their own requests
+CREATE POLICY "Users can read their requests" ON intro_requests
+  FOR SELECT USING (auth.uid() = investor_id);
+
+-- Allow authenticated users to create requests
+CREATE POLICY "Authenticated users can create requests" ON intro_requests
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+```
+
+### Storage Policies
+
+```sql
+-- Logos bucket: public read, authenticated write
+CREATE POLICY "Public logo access" ON storage.objects
+  FOR SELECT USING (bucket_id = 'fundraising' AND (storage.foldername(name))[1] = 'logos');
+
+CREATE POLICY "Authenticated logo upload" ON storage.objects
+  FOR INSERT WITH CHECK (
+    bucket_id = 'fundraising' 
+    AND auth.uid() IS NOT NULL
+    AND (storage.foldername(name))[1] = 'logos'
+  );
+
+-- Decks bucket: authenticated read/write
+CREATE POLICY "Authenticated deck access" ON storage.objects
+  FOR SELECT USING (
+    bucket_id = 'fundraising' 
+    AND auth.uid() IS NOT NULL
+    AND (storage.foldername(name))[1] = 'decks'
+  );
+
+CREATE POLICY "Authenticated deck upload" ON storage.objects
+  FOR INSERT WITH CHECK (
+    bucket_id = 'fundraising' 
+    AND auth.uid() IS NOT NULL
+    AND (storage.foldername(name))[1] = 'decks'
+  );
 ```
 
 ## Performance Optimization
@@ -626,13 +648,13 @@ service firebase.storage {
 4. **Dynamic Imports**: Lazy load heavy components (confetti, auth modals)
 5. **Font Optimization**: Use `next/font` for optimal font loading
 
-### Firebase Optimizations
+### Supabase Optimizations
 
-1. **Firestore Queries**: Use indexes for efficient queries
+1. **Database Queries**: Use indexes for efficient queries
 2. **Pagination**: Implement cursor-based pagination for trending cards
 3. **Real-time Listeners**: Use sparingly, prefer one-time reads
 4. **Storage**: Compress images before upload
-5. **Caching**: Cache Firestore queries with SWR or React Query
+5. **Caching**: Cache database queries with SWR or React Query
 
 ### Lighthouse Targets
 
@@ -652,21 +674,17 @@ service firebase.storage {
   "outputDirectory": ".next",
   "framework": "nextjs",
   "env": {
-    "NEXT_PUBLIC_FIREBASE_API_KEY": "@firebase-api-key",
-    "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN": "@firebase-auth-domain",
-    "NEXT_PUBLIC_FIREBASE_PROJECT_ID": "@firebase-project-id",
-    "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET": "@firebase-storage-bucket",
-    "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "@firebase-messaging-sender-id",
-    "NEXT_PUBLIC_FIREBASE_APP_ID": "@firebase-app-id"
+    "NEXT_PUBLIC_SUPABASE_URL": "@supabase-url",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@supabase-anon-key"
   }
 }
 ```
 
 ### Deployment Checklist
 
-1. Set up Firebase project
-2. Configure Firestore and Storage
-3. Deploy security rules
+1. Set up Supabase project
+2. Configure database tables and RLS policies
+3. Set up Storage buckets
 4. Create Vercel project
 5. Add environment variables
 6. Connect GitHub repository

@@ -1,5 +1,5 @@
 /**
- * Property-Based Tests for Firebase Storage helpers
+ * Property-Based Tests for Supabase Storage helpers
  * Feature: fundfeed-pwa, Property 2: File upload validation
  * Validates: Requirements 2.3, 2.4
  */
@@ -13,7 +13,7 @@ describe('Storage - Property-Based Tests', () => {
    * For any file upload attempt, the system must validate both file type and size:
    * - Logos must be PNG/JPG/WEBP under 5MB
    * - Decks must be PDF under 10MB
-   * - All invalid files must be rejected before upload to Firebase Storage
+   * - All invalid files must be rejected before upload to Supabase Storage
    */
 
   describe('Logo file validation', () => {

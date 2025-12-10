@@ -16,7 +16,7 @@ jest.mock('@/lib/supabase', () => ({
 }));
 
 // Import after mock is set up
-import { createIntroRequest, hasIntroRequest } from './firestore';
+import { createIntroRequest, hasIntroRequest } from './database';
 
 describe('Intro Request - Property-Based Tests', () => {
   beforeEach(() => {

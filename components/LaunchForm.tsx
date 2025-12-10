@@ -124,7 +124,7 @@ export const LaunchForm: React.FC<LaunchFormProps> = ({ onSuccess }) => {
     try {
       // Import functions dynamically to avoid circular dependencies
       const { uploadRoundFiles } = await import('@/lib/storage');
-      const { createFundraisingRound } = await import('@/lib/firestore');
+      const { createFundraisingRound } = await import('@/lib/database');
 
       // Generate a temporary ID for the round
       const tempRoundId = `temp-${Date.now()}`;

@@ -2,11 +2,11 @@
 
 ## Introduction
 
-Fundfeed is a Progressive Web App (PWA) that serves as "Product Hunt for startup fundraising." The platform enables startups to showcase their fundraising rounds and allows investors to discover and connect with promising ventures. Built with Next.js 14, Firebase, and designed for deployment on Vercel, Fundfeed provides an installable, mobile-first experience for both founders and investors.
+Fundfeed is a Progressive Web App (PWA) that serves as "Product Hunt for startup fundraising." The platform enables startups to showcase their fundraising rounds and allows investors to discover and connect with promising ventures. Built with Next.js 14, Supabase, and designed for deployment on Vercel, Fundfeed provides an installable, mobile-first experience for both founders and investors.
 
 ## Glossary
 
-- **Fundfeed System**: The complete Progressive Web App including frontend, backend services, and Firebase integration
+- **Fundfeed System**: The complete Progressive Web App including frontend, backend services, and Supabase integration
 - **Fundraising Round**: A startup's capital raising campaign with associated details (logo, deck, amount, description)
 - **Trending Card**: A visual component displaying a fundraising round's key information on the homepage
 - **Launch Page**: The interface where founders submit new fundraising rounds
@@ -15,9 +15,9 @@ Fundfeed is a Progressive Web App (PWA) that serves as "Product Hunt for startup
 - **Request Intro**: An action allowing investors to express interest in connecting with a startup
 - **PWA Manifest**: Configuration file enabling the app to be installed on devices
 - **Service Worker**: Background script enabling offline functionality and app-like behavior
-- **Firebase Auth**: Authentication service managing user identity and sessions
-- **Firestore**: NoSQL database storing fundraising rounds and user data
-- **Firebase Storage**: Cloud storage service for logos and PDF pitch decks
+- **Supabase Auth**: Authentication service managing user identity and sessions
+- **Supabase Database**: PostgreSQL database storing fundraising rounds and user data
+- **Supabase Storage**: Cloud storage service for logos and PDF pitch decks
 - **Dark Mode**: Alternative color scheme with dark backgrounds for reduced eye strain
 
 ## Requirements
@@ -31,7 +31,7 @@ Fundfeed is a Progressive Web App (PWA) that serves as "Product Hunt for startup
 1. WHEN a user navigates to the homepage THEN the Fundfeed System SHALL display a grid of trending cards showing active fundraising rounds
 2. WHEN displaying a trending card THEN the Fundfeed System SHALL show the startup logo, company name, raising amount, and a Follow button
 3. WHEN trending cards are loaded THEN the Fundfeed System SHALL sort them by a trending algorithm based on recency and engagement
-4. WHEN the homepage loads THEN the Fundfeed System SHALL fetch fundraising round data from Firestore within 2 seconds
+4. WHEN the homepage loads THEN the Fundfeed System SHALL fetch fundraising round data from Supabase within 2 seconds
 5. WHEN no fundraising rounds exist THEN the Fundfeed System SHALL display an empty state message encouraging users to launch the first round
 
 ### Requirement 2
@@ -44,7 +44,7 @@ Fundfeed is a Progressive Web App (PWA) that serves as "Product Hunt for startup
 2. WHEN a founder submits the launch form THEN the Fundfeed System SHALL require company name, logo image, raising amount, and PDF pitch deck
 3. WHEN a founder uploads a logo THEN the Fundfeed System SHALL accept image files in PNG, JPG, or WEBP format under 5MB
 4. WHEN a founder uploads a pitch deck THEN the Fundfeed System SHALL accept PDF files under 10MB
-5. WHEN a founder submits valid form data THEN the Fundfeed System SHALL upload files to Firebase Storage, create a Firestore document, and redirect to the homepage with success confirmation
+5. WHEN a founder submits valid form data THEN the Fundfeed System SHALL upload files to Supabase Storage, create a database record, and redirect to the homepage with success confirmation
 
 ### Requirement 3
 
@@ -53,8 +53,8 @@ Fundfeed is a Progressive Web App (PWA) that serves as "Product Hunt for startup
 #### Acceptance Criteria
 
 1. WHEN an investor views a fundraising round THEN the Fundfeed System SHALL display a Request Intro button
-2. WHEN an investor clicks Request Intro THEN the Fundfeed System SHALL require the investor to be authenticated via Firebase Auth
-3. WHEN an authenticated investor requests an intro THEN the Fundfeed System SHALL store the request in Firestore with investor ID, startup ID, and timestamp
+2. WHEN an investor clicks Request Intro THEN the Fundfeed System SHALL require the investor to be authenticated via Supabase Auth
+3. WHEN an authenticated investor requests an intro THEN the Fundfeed System SHALL store the request in the database with investor ID, startup ID, and timestamp
 4. WHEN an intro request is submitted THEN the Fundfeed System SHALL display a success message confirming the request
 5. WHEN an investor has already requested an intro for a startup THEN the Fundfeed System SHALL disable the Request Intro button and show "Intro Requested" status
 
@@ -64,7 +64,7 @@ Fundfeed is a Progressive Web App (PWA) that serves as "Product Hunt for startup
 
 #### Acceptance Criteria
 
-1. WHEN a user clicks a sign-in button THEN the Fundfeed System SHALL display Firebase Auth authentication options including email/password and Google sign-in
+1. WHEN a user clicks a sign-in button THEN the Fundfeed System SHALL display Supabase Auth authentication options including email/password and Google sign-in
 2. WHEN a user successfully authenticates THEN the Fundfeed System SHALL store the user session and display the user's profile information
 3. WHEN an authenticated user refreshes the page THEN the Fundfeed System SHALL maintain the user session without requiring re-authentication
 4. WHEN a user signs out THEN the Fundfeed System SHALL clear the session and redirect to the homepage
@@ -125,7 +125,7 @@ Fundfeed is a Progressive Web App (PWA) that serves as "Product Hunt for startup
 #### Acceptance Criteria
 
 1. WHEN the repository is connected to Vercel THEN the Fundfeed System SHALL automatically deploy on every push to the main branch
-2. WHEN environment variables are configured THEN the Fundfeed System SHALL securely access Firebase credentials without exposing them in client code
+2. WHEN environment variables are configured THEN the Fundfeed System SHALL securely access Supabase credentials without exposing them in client code
 3. WHEN the app is deployed THEN the Fundfeed System SHALL serve static assets from Vercel's global CDN
 4. WHEN API routes are called THEN the Fundfeed System SHALL execute them as serverless functions on Vercel's edge network
 5. WHEN a deployment completes THEN the Fundfeed System SHALL be accessible via a production URL with HTTPS enabled
@@ -137,7 +137,7 @@ Fundfeed is a Progressive Web App (PWA) that serves as "Product Hunt for startup
 #### Acceptance Criteria
 
 1. WHEN a user clicks the Follow button on a trending card THEN the Fundfeed System SHALL require authentication
-2. WHEN an authenticated user clicks Follow THEN the Fundfeed System SHALL add the startup to the user's followed list in Firestore
+2. WHEN an authenticated user clicks Follow THEN the Fundfeed System SHALL add the startup to the user's followed list in the database
 3. WHEN a user follows a startup THEN the Fundfeed System SHALL update the button to show "Following" status
 4. WHEN a user clicks the Following button THEN the Fundfeed System SHALL unfollow the startup and update the button to "Follow"
 5. WHEN a user views a trending card THEN the Fundfeed System SHALL display the correct follow status based on the user's followed list

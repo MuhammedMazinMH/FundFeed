@@ -40,8 +40,8 @@ jest.mock('@/lib/storage', () => ({
   }),
 }));
 
-// Mock firestore functions
-jest.mock('@/lib/firestore', () => ({
+// Mock database functions
+jest.mock('@/lib/database', () => ({
   createFundraisingRound: jest.fn().mockResolvedValue('round-123'),
 }));
 

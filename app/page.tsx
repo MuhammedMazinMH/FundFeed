@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { TrendingCard } from '@/components/TrendingCard';
 import { TrendingGridSkeleton } from '@/components/LoadingSkeleton';
-import { getTrendingRounds, isDatabaseConfigured } from '@/lib/firestore';
-import { followRound, unfollowRound, getUserProfile, getIntroRequestsForInvestor } from '@/lib/firestore';
+import { getTrendingRounds, isDatabaseConfigured } from '@/lib/database';
+import { followRound, unfollowRound, getUserProfile, getIntroRequestsForInvestor } from '@/lib/database';
 import { FundraisingRound } from '@/types';
 
 export default function Home() {

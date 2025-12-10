@@ -7,7 +7,7 @@
 #### Core Configuration Files
 - ✅ `package.json` - Project dependencies and scripts
 - ✅ `tsconfig.json` - TypeScript configuration
-- ✅ `next.config.js` - Next.js configuration with Firebase Storage domains
+- ✅ `next.config.js` - Next.js configuration with Supabase Storage domains
 - ✅ `tailwind.config.js` - Tailwind CSS with dark mode ('class' strategy)
 - ✅ `postcss.config.js` - PostCSS configuration
 - ✅ `.eslintrc.json` - ESLint configuration
@@ -22,7 +22,7 @@ fundfeed/
 │   ├── page.tsx           # Homepage
 │   └── globals.css        # Global styles with Tailwind
 ├── components/            # React components (ready for use)
-├── lib/                   # Firebase and utility functions (ready for use)
+├── lib/                   # Supabase and utility functions (ready for use)
 ├── contexts/              # React Context providers (ready for use)
 ├── types/                 # TypeScript type definitions
 │   └── index.ts          # Core interfaces (FundraisingRound, User, IntroRequest)
@@ -35,7 +35,7 @@ fundfeed/
 - ✅ next@14.2.3 - Next.js framework
 - ✅ react@18.3.1 - React library
 - ✅ react-dom@18.3.1 - React DOM
-- ✅ firebase@10.12.2 - Firebase SDK (Auth, Firestore, Storage)
+- ✅ @supabase/supabase-js - Supabase SDK (Auth, Database, Storage)
 - ✅ canvas-confetti@1.9.3 - Confetti animations
 - ✅ tailwindcss@3.4.3 - Utility-first CSS framework
 
@@ -66,12 +66,12 @@ fundfeed/
    - React Testing Library integrated
 4. **Next.js 14**: 
    - App Router enabled
-   - Image optimization configured for Firebase Storage
+   - Image optimization configured for Supabase Storage
    - TypeScript support
 
 #### Additional Files
 - ✅ `.gitignore` - Git ignore rules
-- ✅ `.env.example` - Environment variable template for Firebase
+- ✅ `.env.example` - Environment variable template for Supabase
 - ✅ `README.md` - Project documentation
 - ✅ `verify-setup.js` - Setup verification script
 
@@ -81,7 +81,7 @@ fundfeed/
 
 ### Next Steps
 The project is now ready for the next tasks:
-- Task 2: Set up Firebase configuration and TypeScript types
+- Task 2: Set up Supabase configuration and TypeScript types
 - Task 3: Implement authentication system
 - And so on...
 

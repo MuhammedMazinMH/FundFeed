@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Force dynamic rendering to avoid build-time Firebase initialization
+// Force dynamic rendering to avoid build-time Supabase initialization
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   // Lazy import to avoid build-time initialization
-  const { createIntroRequest, hasIntroRequest } = await import('@/lib/firestore');
+  const { createIntroRequest, hasIntroRequest } = await import('@/lib/database');
   try {
     // Get the authorization header
     const authHeader = request.headers.get('authorization');
     
     // For client-side requests, we'll check if user is authenticated via cookie/session
-    // In a real app, you'd verify the Firebase ID token here
+    // In a real app, you'd verify the Supabase session here
     const body = await request.json();
     const { roundId, startupName, userId } = body;
 

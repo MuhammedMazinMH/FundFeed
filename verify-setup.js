@@ -52,7 +52,7 @@ const packageJson = require('./package.json');
 const requiredDeps = {
   'next': '14.2.3',
   'react': '^18.3.1',
-  'firebase': '^10.12.2',
+  '@supabase/supabase-js': '^2.49.4',
   'canvas-confetti': '^1.9.3',
   'tailwindcss': '^3.4.3',
   'typescript': '^5.4.5',

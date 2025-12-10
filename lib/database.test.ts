@@ -1,5 +1,5 @@
 /**
- * Property-Based Tests for Firestore helpers
+ * Property-Based Tests for Database helpers
  * Feature: fundfeed-pwa, Property 12: Trending algorithm sorting
  * Validates: Requirements 1.3
  */
@@ -17,9 +17,9 @@ jest.mock('@/lib/supabase', () => ({
 }));
 
 // Import after mock is set up
-import { getTrendingRounds } from './firestore';
+import { getTrendingRounds } from './database';
 
-describe('Firestore - Property-Based Tests', () => {
+describe('Database - Property-Based Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockFromFn.mockReset();
@@ -38,14 +38,14 @@ describe('Firestore - Property-Based Tests', () => {
             companyName: fc.string({ minLength: 1, maxLength: 50 }),
             raisingAmount: fc.integer({ min: 10000, max: 100000000 }),
             followerCount: fc.integer({ min: 0, max: 10000 }),
-            createdAtMs: fc.integer({ 
-              min: Date.now() - 365 * 24 * 60 * 60 * 1000, 
-              max: Date.now() 
+            createdAtMs: fc.integer({
+              min: Date.now() - 365 * 24 * 60 * 60 * 1000,
+              max: Date.now(),
             }),
           }),
           { minLength: 2, maxLength: 20 }
         ),
-        async (roundsData) => {
+        async roundsData => {
           // Convert to FundraisingRound objects
           const mockRounds: FundraisingRound[] = roundsData.map((data, index) => ({
             id: `round-${index}`,
@@ -66,11 +66,11 @@ describe('Firestore - Property-Based Tests', () => {
           const sortedRounds = [...mockRounds].sort((a, b) => {
             const timeA = new Date(a.createdAt).getTime();
             const timeB = new Date(b.createdAt).getTime();
-            
+
             if (timeA !== timeB) {
               return timeB - timeA; // Descending
             }
-            
+
             return b.followerCount - a.followerCount; // Descending
           });
 

@@ -1,13 +1,13 @@
 # Fundfeed
 
-Product Hunt for startup fundraising - A Progressive Web App built with Next.js 14, Firebase, and TypeScript.
+Product Hunt for startup fundraising - A Progressive Web App built with Next.js 14, Supabase, and TypeScript.
 
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js 18+ and npm
-- Firebase project with Firestore, Authentication, and Storage enabled
+- Supabase project with Authentication and Storage enabled
 
 ### Installation
 
@@ -18,7 +18,7 @@ Product Hunt for startup fundraising - A Progressive Web App built with Next.js 
 npm install
 ```
 
-3. Copy `.env.example` to `.env.local` and fill in your Firebase credentials:
+3. Copy `.env.example` to `.env.local` and fill in your Supabase credentials:
 
 ```bash
 cp .env.example .env.local
@@ -38,7 +38,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 fundfeed/
 ├── app/                    # Next.js 14 App Router pages
 ├── components/             # React components
-├── lib/                    # Firebase and utility functions
+├── lib/                    # Supabase and utility functions
 ├── contexts/               # React Context providers
 ├── types/                  # TypeScript type definitions
 └── public/                 # Static assets
@@ -49,9 +49,9 @@ fundfeed/
 - **Framework**: Next.js 14 with App Router
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS with dark mode
-- **Authentication**: Firebase Auth
-- **Database**: Firestore
-- **Storage**: Firebase Storage
+- **Authentication**: Supabase Auth
+- **Database**: Supabase (PostgreSQL)
+- **Storage**: Supabase Storage
 - **Deployment**: Vercel
 - **Testing**: Jest, fast-check (property-based testing)
 
@@ -79,36 +79,26 @@ fundfeed/
 3. Configure environment variables in Vercel:
    - Go to Project Settings > Environment Variables
    - Add the following variables:
-     - `NEXT_PUBLIC_FIREBASE_API_KEY`
-     - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
-     - `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
-     - `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
-     - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
-     - `NEXT_PUBLIC_FIREBASE_APP_ID`
+     - `NEXT_PUBLIC_SUPABASE_URL`
+     - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
 4. Deploy:
    ```bash
    vercel
    ```
 
-### Firebase Setup
+### Supabase Setup
 
-1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
+1. Create a Supabase project at [supabase.com](https://supabase.com)
 
 2. Enable the following services:
    - Authentication (Email/Password and Google providers)
-   - Firestore Database
+   - Database (PostgreSQL)
    - Storage
 
-3. Deploy security rules:
-   ```bash
-   firebase deploy --only firestore:rules,storage:rules
-   ```
+3. Run the database migrations in `supabase/migrations/`
 
-4. Deploy Firestore indexes:
-   ```bash
-   firebase deploy --only firestore:indexes
-   ```
+4. Configure Storage buckets for logos and decks
 
 ## Testing
 
@@ -124,4 +114,4 @@ npm test -- --watch
 
 ## License
 
-MIT
+See LICENSE file for details.
