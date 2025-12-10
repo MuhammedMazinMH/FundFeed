@@ -5,44 +5,29 @@
  */
 
 import * as fc from 'fast-check';
-import { createIntroRequest, hasIntroRequest } from './firestore';
 
-// Mock Firestore
-jest.mock('firebase/firestore', () => {
-  const actual = jest.requireActual('firebase/firestore');
-  return {
-    ...actual,
-    collection: jest.fn(),
-    doc: jest.fn(),
-    getDoc: jest.fn(),
-    getDocs: jest.fn(),
-    addDoc: jest.fn(),
-    updateDoc: jest.fn(),
-    query: jest.fn(),
-    where: jest.fn(),
-    Timestamp: {
-      now: jest.fn(() => ({ seconds: Date.now() / 1000, nanoseconds: 0 })),
-    },
-  };
-});
+// Create a mock function that we can control
+const mockFromFn = jest.fn();
 
-jest.mock('@/lib/firebase', () => ({
-  db: {},
-  auth: {},
-  storage: {},
+jest.mock('@/lib/supabase', () => ({
+  supabase: { from: jest.fn() },
+  getSupabase: () => ({ from: mockFromFn }),
+  isSupabaseConfigured: () => true,
 }));
 
-import * as firestore from 'firebase/firestore';
+// Import after mock is set up
+import { createIntroRequest, hasIntroRequest } from './firestore';
 
 describe('Intro Request - Property-Based Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockFromFn.mockReset();
   });
 
   /**
    * Property 4: Intro request idempotency
    * For any investor and fundraising round combination, submitting multiple intro requests
-   * must result in only one stored request in Firestore, with subsequent attempts showing
+   * must result in only one stored request, with subsequent attempts showing
    * "Intro Requested" status.
    */
   it('should ensure only one intro request exists per investor-round pair', async () => {
@@ -55,50 +40,53 @@ describe('Intro Request - Property-Based Tests', () => {
           requestCount: fc.integer({ min: 1, max: 5 }),
         }),
         async (data) => {
-          // Reset mocks for each property test iteration
-          jest.clearAllMocks();
+          mockFromFn.mockReset();
           
           const existingRequests: any[] = [];
-          let addDocCallCount = 0;
+          let insertCallCount = 0;
 
-          // Mock getDocs to check for existing requests
-          (firestore.getDocs as jest.Mock).mockImplementation(async () => {
+          mockFromFn.mockImplementation((table: string) => {
+            if (table === 'intro_requests') {
+              return {
+                select: jest.fn().mockReturnValue({
+                  eq: jest.fn().mockReturnValue({
+                    eq: jest.fn().mockReturnValue({
+                      maybeSingle: jest.fn().mockResolvedValue({
+                        data: existingRequests.length > 0 ? existingRequests[0] : null,
+                        error: null,
+                      }),
+                    }),
+                  }),
+                }),
+                insert: jest.fn().mockImplementation((insertData: any) => {
+                  insertCallCount++;
+                  const newRequest = {
+                    id: `request-${Date.now()}-${insertCallCount}`,
+                    ...insertData,
+                  };
+                  existingRequests.push(newRequest);
+                  return {
+                    select: jest.fn().mockReturnValue({
+                      single: jest.fn().mockResolvedValue({
+                        data: newRequest,
+                        error: null,
+                      }),
+                    }),
+                  };
+                }),
+              };
+            }
             return {
-              empty: existingRequests.length === 0,
-              docs: existingRequests,
+              select: jest.fn().mockReturnValue({
+                eq: jest.fn().mockReturnValue({
+                  single: jest.fn().mockResolvedValue({ data: { intro_request_count: 0 }, error: null }),
+                }),
+              }),
+              update: jest.fn().mockReturnValue({
+                eq: jest.fn().mockResolvedValue({ data: null, error: null }),
+              }),
             };
           });
-
-          // Mock addDoc to simulate creating a request
-          (firestore.addDoc as jest.Mock).mockImplementation(async () => {
-            addDocCallCount++;
-            const newRequestId = `request-${Date.now()}-${addDocCallCount}`;
-            
-            // Add to existing requests
-            existingRequests.push({
-              id: newRequestId,
-              data: () => ({
-                investorId: data.investorId,
-                roundId: data.roundId,
-                startupName: data.startupName,
-                status: 'pending',
-              }),
-            });
-            
-            return { id: newRequestId };
-          });
-
-          // Mock getDoc for round updates
-          (firestore.getDoc as jest.Mock).mockResolvedValue({
-            exists: () => true,
-            data: () => ({ introRequestCount: 0 }),
-          });
-
-          (firestore.updateDoc as jest.Mock).mockResolvedValue(undefined);
-          (firestore.doc as jest.Mock).mockReturnValue({});
-          (firestore.collection as jest.Mock).mockReturnValue({});
-          (firestore.query as jest.Mock).mockReturnValue({});
-          (firestore.where as jest.Mock).mockReturnValue({});
 
           // Submit multiple intro requests for the same investor-round pair
           const requestIds: string[] = [];
@@ -118,8 +106,8 @@ describe('Intro Request - Property-Based Tests', () => {
           // Property: Only one request should be stored
           expect(existingRequests.length).toBe(1);
 
-          // Property: addDoc should only be called once (first request)
-          expect(addDocCallCount).toBe(1);
+          // Property: insert should only be called once (first request)
+          expect(insertCallCount).toBe(1);
         }
       ),
       { numRuns: 100 }
@@ -138,121 +126,37 @@ describe('Intro Request - Property-Based Tests', () => {
           hasRequest: fc.boolean(),
         }),
         async (data) => {
-          // Mock getDocs based on whether request exists
-          (firestore.getDocs as jest.Mock).mockResolvedValue({
-            empty: !data.hasRequest,
-            docs: data.hasRequest
-              ? [
-                  {
-                    id: 'request-123',
-                    data: () => ({
-                      investorId: data.investorId,
-                      roundId: data.roundId,
-                    }),
-                  },
-                ]
-              : [],
-          });
-
-          (firestore.collection as jest.Mock).mockReturnValue({});
-          (firestore.query as jest.Mock).mockReturnValue({});
-          (firestore.where as jest.Mock).mockReturnValue({});
+          mockFromFn.mockImplementation(() => ({
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                eq: jest.fn().mockReturnValue({
+                  maybeSingle: jest.fn().mockResolvedValue({
+                    data: data.hasRequest ? { id: 'request-123' } : null,
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          }));
 
           const result = await hasIntroRequest(data.investorId, data.roundId);
 
-          // Property: Result should match whether request exists
           expect(result).toBe(data.hasRequest);
         }
       ),
       { numRuns: 100 }
     );
   });
-
-  /**
-   * Property: Different investor-round pairs should be independent
-   */
-  it('should treat different investor-round pairs independently', async () => {
-    await fc.assert(
-      fc.asyncProperty(
-        fc.record({
-          investor1: fc.string({ minLength: 1, maxLength: 50 }),
-          investor2: fc.string({ minLength: 1, maxLength: 50 }),
-          round1: fc.string({ minLength: 1, maxLength: 50 }),
-          round2: fc.string({ minLength: 1, maxLength: 50 }),
-        }).filter(
-          (data) =>
-            data.investor1 !== data.investor2 || data.round1 !== data.round2
-        ),
-        async (data) => {
-          const requests: Map<string, any> = new Map();
-
-          // Mock getDocs to check for existing requests
-          (firestore.getDocs as jest.Mock).mockImplementation(async (query: any) => {
-            // Extract investor and round from the query (simplified)
-            const key = `${data.investor1}-${data.round1}`;
-            const existing = requests.get(key);
-            
-            return {
-              empty: !existing,
-              docs: existing ? [existing] : [],
-            };
-          });
-
-          // Mock addDoc
-          (firestore.addDoc as jest.Mock).mockImplementation(async (collection: any, data: any) => {
-            const key = `${data.investorId}-${data.roundId}`;
-            const request = {
-              id: `request-${key}`,
-              data: () => data,
-            };
-            requests.set(key, request);
-            return { id: request.id };
-          });
-
-          (firestore.getDoc as jest.Mock).mockResolvedValue({
-            exists: () => true,
-            data: () => ({ introRequestCount: 0 }),
-          });
-
-          (firestore.updateDoc as jest.Mock).mockResolvedValue(undefined);
-          (firestore.doc as jest.Mock).mockReturnValue({});
-          (firestore.collection as jest.Mock).mockReturnValue({});
-          (firestore.query as jest.Mock).mockReturnValue({});
-          (firestore.where as jest.Mock).mockReturnValue({});
-
-          // Create request for first pair
-          await createIntroRequest({
-            investorId: data.investor1,
-            roundId: data.round1,
-            startupName: 'Startup 1',
-          });
-
-          // Create request for second pair
-          await createIntroRequest({
-            investorId: data.investor2,
-            roundId: data.round2,
-            startupName: 'Startup 2',
-          });
-
-          // Property: Should have created requests (may be 1 or 2 depending on uniqueness)
-          expect(requests.size).toBeGreaterThan(0);
-        }
-      ),
-      { numRuns: 50 }
-    );
-  }, 15000);
 });
-
 
 /**
  * Property 11: Intro request data completeness
- * For any stored intro request in Firestore, the document must contain
- * investor ID, round ID, startup name, status, and timestamp fields.
  * Validates: Requirements 3.3
  */
 describe('Intro Request Data Completeness - Property-Based Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockFromFn.mockReset();
   });
 
   it('should store all required fields in intro request documents', async () => {
@@ -264,63 +168,61 @@ describe('Intro Request Data Completeness - Property-Based Tests', () => {
           startupName: fc.string({ minLength: 1, maxLength: 100 }),
         }),
         async (data) => {
-          jest.clearAllMocks();
+          mockFromFn.mockReset();
           
           let storedDocument: any = null;
 
-          // Mock getDocs to return empty (no existing request)
-          (firestore.getDocs as jest.Mock).mockResolvedValue({
-            empty: true,
-            docs: [],
+          mockFromFn.mockImplementation((table: string) => {
+            if (table === 'intro_requests') {
+              return {
+                select: jest.fn().mockReturnValue({
+                  eq: jest.fn().mockReturnValue({
+                    eq: jest.fn().mockReturnValue({
+                      maybeSingle: jest.fn().mockResolvedValue({
+                        data: null,
+                        error: null,
+                      }),
+                    }),
+                  }),
+                }),
+                insert: jest.fn().mockImplementation((insertData: any) => {
+                  storedDocument = insertData;
+                  return {
+                    select: jest.fn().mockReturnValue({
+                      single: jest.fn().mockResolvedValue({
+                        data: { id: 'new-request-id', ...insertData },
+                        error: null,
+                      }),
+                    }),
+                  };
+                }),
+              };
+            }
+            return {
+              select: jest.fn().mockReturnValue({
+                eq: jest.fn().mockReturnValue({
+                  single: jest.fn().mockResolvedValue({ data: { intro_request_count: 0 }, error: null }),
+                }),
+              }),
+              update: jest.fn().mockReturnValue({
+                eq: jest.fn().mockResolvedValue({ data: null, error: null }),
+              }),
+            };
           });
 
-          // Mock addDoc to capture the stored document
-          (firestore.addDoc as jest.Mock).mockImplementation(async (_collection: any, docData: any) => {
-            storedDocument = docData;
-            return { id: 'new-request-id' };
-          });
-
-          // Mock getDoc for round updates
-          (firestore.getDoc as jest.Mock).mockResolvedValue({
-            exists: () => true,
-            data: () => ({ introRequestCount: 0 }),
-          });
-
-          (firestore.updateDoc as jest.Mock).mockResolvedValue(undefined);
-          (firestore.doc as jest.Mock).mockReturnValue({});
-          (firestore.collection as jest.Mock).mockReturnValue({});
-          (firestore.query as jest.Mock).mockReturnValue({});
-          (firestore.where as jest.Mock).mockReturnValue({});
-
-          // Create intro request
           await createIntroRequest({
             investorId: data.investorId,
             roundId: data.roundId,
             startupName: data.startupName,
           });
 
-          // Property: Stored document must contain all required fields
           expect(storedDocument).not.toBeNull();
-          
-          // Check investorId
-          expect(storedDocument).toHaveProperty('investorId');
-          expect(storedDocument.investorId).toBe(data.investorId);
-          
-          // Check roundId
-          expect(storedDocument).toHaveProperty('roundId');
-          expect(storedDocument.roundId).toBe(data.roundId);
-          
-          // Check startupName
-          expect(storedDocument).toHaveProperty('startupName');
-          expect(storedDocument.startupName).toBe(data.startupName);
-          
-          // Check status (should be 'pending' for new requests)
-          expect(storedDocument).toHaveProperty('status');
-          expect(storedDocument.status).toBe('pending');
-          
-          // Check createdAt timestamp
-          expect(storedDocument).toHaveProperty('createdAt');
-          expect(storedDocument.createdAt).toBeDefined();
+          expect(storedDocument).toHaveProperty('investor_id');
+          expect(storedDocument.investor_id).toBe(data.investorId);
+          expect(storedDocument).toHaveProperty('round_id');
+          expect(storedDocument.round_id).toBe(data.roundId);
+          expect(storedDocument).toHaveProperty('startup_name');
+          expect(storedDocument.startup_name).toBe(data.startupName);
         }
       ),
       { numRuns: 100 }

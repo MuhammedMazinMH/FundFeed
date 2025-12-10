@@ -5,62 +5,39 @@
  */
 
 import * as fc from 'fast-check';
-import { getTrendingRounds } from './firestore';
 import { FundraisingRound } from '@/types';
-import { Timestamp } from 'firebase/firestore';
 
-// Mock Firestore
-jest.mock('firebase/firestore', () => {
-  const actual = jest.requireActual('firebase/firestore');
-  return {
-    ...actual,
-    collection: jest.fn(),
-    query: jest.fn(),
-    orderBy: jest.fn(),
-    limit: jest.fn(),
-    getDocs: jest.fn(),
-    Timestamp: {
-      now: jest.fn(() => ({ seconds: Date.now() / 1000, nanoseconds: 0 })),
-      fromDate: jest.fn((date: Date) => ({ 
-        seconds: date.getTime() / 1000, 
-        nanoseconds: 0,
-        toDate: () => date,
-      })),
-    },
-  };
-});
+// Create a mock function that we can control
+const mockFromFn = jest.fn();
 
-jest.mock('@/lib/firebase', () => ({
-  db: {},
-  auth: {},
-  storage: {},
+jest.mock('@/lib/supabase', () => ({
+  supabase: { from: jest.fn() },
+  getSupabase: () => ({ from: mockFromFn }),
+  isSupabaseConfigured: () => true,
 }));
 
-import * as firestore from 'firebase/firestore';
+// Import after mock is set up
+import { getTrendingRounds } from './firestore';
 
 describe('Firestore - Property-Based Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockFromFn.mockReset();
   });
 
   /**
    * Property 12: Trending algorithm sorting
    * For any set of fundraising rounds, the homepage must display them sorted
    * by the trending algorithm (recency and engagement) in descending order.
-   * 
-   * The trending algorithm sorts primarily by createdAt (most recent first),
-   * and secondarily by followerCount (most followers first).
    */
   it('should return rounds sorted by createdAt desc, then followerCount desc', async () => {
     await fc.assert(
       fc.asyncProperty(
-        // Generate an array of fundraising rounds with random data
         fc.array(
           fc.record({
             companyName: fc.string({ minLength: 1, maxLength: 50 }),
             raisingAmount: fc.integer({ min: 10000, max: 100000000 }),
             followerCount: fc.integer({ min: 0, max: 10000 }),
-            // Generate timestamps within the last year
             createdAtMs: fc.integer({ 
               min: Date.now() - 365 * 24 * 60 * 60 * 1000, 
               max: Date.now() 
@@ -69,7 +46,7 @@ describe('Firestore - Property-Based Tests', () => {
           { minLength: 2, maxLength: 20 }
         ),
         async (roundsData) => {
-          // Convert to FundraisingRound objects with Firestore Timestamps
+          // Convert to FundraisingRound objects
           const mockRounds: FundraisingRound[] = roundsData.map((data, index) => ({
             id: `round-${index}`,
             companyName: data.companyName,
@@ -79,70 +56,64 @@ describe('Firestore - Property-Based Tests', () => {
             description: 'Test description',
             deckUrl: `https://example.com/deck-${index}.pdf`,
             founderId: `founder-${index}`,
-            createdAt: {
-              seconds: data.createdAtMs / 1000,
-              nanoseconds: 0,
-              toDate: () => new Date(data.createdAtMs),
-            } as any,
-            updatedAt: {
-              seconds: data.createdAtMs / 1000,
-              nanoseconds: 0,
-              toDate: () => new Date(data.createdAtMs),
-            } as any,
+            createdAt: new Date(data.createdAtMs).toISOString(),
+            updatedAt: new Date(data.createdAtMs).toISOString(),
             followerCount: data.followerCount,
             introRequestCount: 0,
           }));
 
           // Sort the mock data according to the trending algorithm
-          // (this simulates what Firestore would do with orderBy)
           const sortedRounds = [...mockRounds].sort((a, b) => {
-            // Primary sort: createdAt descending (newer first)
-            const timeA = a.createdAt.toDate().getTime();
-            const timeB = b.createdAt.toDate().getTime();
+            const timeA = new Date(a.createdAt).getTime();
+            const timeB = new Date(b.createdAt).getTime();
             
             if (timeA !== timeB) {
               return timeB - timeA; // Descending
             }
             
-            // Secondary sort: followerCount descending (more followers first)
             return b.followerCount - a.followerCount; // Descending
           });
 
-          // Mock Firestore to return sorted data
-          const mockQuerySnapshot = {
-            docs: sortedRounds.map(round => ({
-              id: round.id,
-              data: () => {
-                const { id, ...data } = round;
-                return data;
-              },
-            })),
-            empty: sortedRounds.length === 0,
-          };
+          // Mock Supabase to return sorted data
+          mockFromFn.mockImplementation(() => ({
+            select: jest.fn().mockReturnValue({
+              order: jest.fn().mockReturnValue({
+                order: jest.fn().mockReturnValue({
+                  limit: jest.fn().mockResolvedValue({
+                    data: sortedRounds.map(round => ({
+                      id: round.id,
+                      company_name: round.companyName,
+                      logo_url: round.logoUrl,
+                      raising_amount: round.raisingAmount,
+                      currency: round.currency,
+                      description: round.description,
+                      deck_url: round.deckUrl,
+                      founder_id: round.founderId,
+                      created_at: round.createdAt,
+                      updated_at: round.updatedAt,
+                      follower_count: round.followerCount,
+                      intro_request_count: round.introRequestCount,
+                    })),
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          }));
 
-          (firestore.getDocs as jest.Mock).mockResolvedValue(mockQuerySnapshot);
-          (firestore.collection as jest.Mock).mockReturnValue({});
-          (firestore.query as jest.Mock).mockReturnValue({});
-          (firestore.orderBy as jest.Mock).mockReturnValue({});
-          (firestore.limit as jest.Mock).mockReturnValue({});
-
-          // Call the function
           const result = await getTrendingRounds(mockRounds.length);
 
           // Verify the sorting property
-          // The result should be sorted by createdAt (desc), then followerCount (desc)
           for (let i = 0; i < result.length - 1; i++) {
             const current = result[i];
             const next = result[i + 1];
 
-            const currentTime = current.createdAt.toDate().getTime();
-            const nextTime = next.createdAt.toDate().getTime();
+            const currentTime = new Date(current.createdAt).getTime();
+            const nextTime = new Date(next.createdAt).getTime();
 
-            // Primary sort: createdAt descending (newer first)
             if (currentTime !== nextTime) {
               expect(currentTime).toBeGreaterThanOrEqual(nextTime);
             } else {
-              // Secondary sort: followerCount descending (more followers first)
               expect(current.followerCount).toBeGreaterThanOrEqual(next.followerCount);
             }
           }

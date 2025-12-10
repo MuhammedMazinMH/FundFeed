@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { TrendingCard } from '@/components/TrendingCard';
 import { TrendingGridSkeleton } from '@/components/LoadingSkeleton';
-import { getTrendingRounds } from '@/lib/firestore';
+import { getTrendingRounds, isDatabaseConfigured } from '@/lib/firestore';
 import { followRound, unfollowRound, getUserProfile, getIntroRequestsForInvestor } from '@/lib/firestore';
 import { FundraisingRound } from '@/types';
 
@@ -22,6 +22,13 @@ export default function Home() {
       try {
         setLoading(true);
         setError(null);
+
+        // Check if database is configured
+        if (!isDatabaseConfigured()) {
+          setError('Database not configured. Please set up your Supabase credentials in .env.local');
+          setLoading(false);
+          return;
+        }
 
         // Fetch trending rounds
         const trendingRounds = await getTrendingRounds(20);

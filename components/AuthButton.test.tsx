@@ -26,7 +26,6 @@ describe('AuthButton', () => {
 
     const { container } = render(<AuthButton />);
     
-    // Check for loading skeleton
     const loadingElements = container.querySelectorAll('.animate-pulse');
     expect(loadingElements.length).toBeGreaterThan(0);
   });
@@ -49,10 +48,12 @@ describe('AuthButton', () => {
 
   it('shows user profile and sign out button when authenticated', () => {
     const mockUser = {
-      uid: 'test-uid',
+      id: 'test-uid',
       email: 'test@example.com',
-      displayName: 'Test User',
-      photoURL: 'https://example.com/photo.jpg',
+      user_metadata: {
+        full_name: 'Test User',
+        avatar_url: 'https://example.com/photo.jpg',
+      },
     } as any;
 
     mockUseAuth.mockReturnValue({
@@ -96,9 +97,11 @@ describe('AuthButton', () => {
   it('calls signOut when sign out button is clicked', async () => {
     const mockSignOut = jest.fn().mockResolvedValue(undefined);
     const mockUser = {
-      uid: 'test-uid',
+      id: 'test-uid',
       email: 'test@example.com',
-      displayName: 'Test User',
+      user_metadata: {
+        full_name: 'Test User',
+      },
     } as any;
 
     mockUseAuth.mockReturnValue({
@@ -120,12 +123,13 @@ describe('AuthButton', () => {
     });
   });
 
-  it('displays user initial when no photo URL is provided', () => {
+  it('displays user initial when no avatar URL is provided', () => {
     const mockUser = {
-      uid: 'test-uid',
+      id: 'test-uid',
       email: 'test@example.com',
-      displayName: 'Test User',
-      photoURL: null,
+      user_metadata: {
+        full_name: 'Test User',
+      },
     } as any;
 
     mockUseAuth.mockReturnValue({
@@ -144,9 +148,11 @@ describe('AuthButton', () => {
 
   it('renders compact variant without user name', () => {
     const mockUser = {
-      uid: 'test-uid',
+      id: 'test-uid',
       email: 'test@example.com',
-      displayName: 'Test User',
+      user_metadata: {
+        full_name: 'Test User',
+      },
     } as any;
 
     mockUseAuth.mockReturnValue({

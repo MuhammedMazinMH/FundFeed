@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { getSupabase } from './supabase';
 
 const LOGO_MAX_SIZE = 5 * 1024 * 1024;
 const DECK_MAX_SIZE = 10 * 1024 * 1024;
@@ -58,6 +58,7 @@ export const uploadLogo = async (
     throw new Error(validation.error);
   }
 
+  const supabase = getSupabase();
   const path = getLogoPath(roundId, file.name);
 
   const { error: uploadError } = await supabase.storage
@@ -87,6 +88,7 @@ export const uploadDeck = async (
     throw new Error(validation.error);
   }
 
+  const supabase = getSupabase();
   const path = getDeckPath(roundId, file.name);
 
   const { error: uploadError } = await supabase.storage
@@ -108,6 +110,7 @@ export const uploadDeck = async (
 };
 
 export const deleteFile = async (path: string): Promise<void> => {
+  const supabase = getSupabase();
   const { error } = await supabase.storage
     .from('fundraising')
     .remove([path]);

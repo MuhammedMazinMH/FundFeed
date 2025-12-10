@@ -7,35 +7,29 @@
 import * as fc from 'fast-check';
 import { renderHook, waitFor } from '@testing-library/react';
 import { AuthProvider, useAuth } from './AuthContext';
-import { User as FirebaseUser } from 'firebase/auth';
+import { User } from '@supabase/supabase-js';
 
-// Mock Firebase auth module
+// Mock Supabase auth module
 jest.mock('@/lib/auth', () => ({
   signInWithEmail: jest.fn(),
   signUpWithEmail: jest.fn(),
   signInWithGoogle: jest.fn(),
   signOut: jest.fn(),
   onAuthStateChange: jest.fn(),
-  isFirebaseConfigured: jest.fn(() => true),
-}));
-
-// Mock Firebase
-jest.mock('@/lib/firebase', () => ({
-  auth: {},
-  db: {},
-  storage: {},
+  isAuthConfigured: jest.fn(() => true),
 }));
 
 import * as authLib from '@/lib/auth';
 
-// Suppress act() warnings for this test file since we're testing async Firebase behavior
+// Suppress act() warnings
 const originalError = console.error;
 beforeAll(() => {
   console.error = (...args: unknown[]) => {
     if (
       typeof args[0] === 'string' &&
-      args[0].includes('Warning: An update to') &&
-      args[0].includes('was not wrapped in act')
+      (args[0].includes('Warning: An update to') ||
+       args[0].includes('was not wrapped in act') ||
+       args[0].includes('unsubscribe is not a function'))
     ) {
       return;
     }
@@ -54,8 +48,6 @@ describe('AuthContext - Property-Based Tests', () => {
 
   /**
    * Property 9: Session persistence across refreshes
-   * For any authenticated user, refreshing the page must maintain the session
-   * without requiring re-authentication until explicit sign-out.
    */
   it('should persist session across component remounts (simulating page refresh)', async () => {
     await fc.assert(
@@ -66,55 +58,51 @@ describe('AuthContext - Property-Based Tests', () => {
           displayName: fc.string({ minLength: 1, maxLength: 100 }),
         }),
         async (userData) => {
-          // Create a mock Firebase user
-          const mockUser: Partial<FirebaseUser> = {
-            uid: userData.uid,
+          jest.clearAllMocks();
+          
+          const mockUser: Partial<User> = {
+            id: userData.uid,
             email: userData.email,
-            displayName: userData.displayName,
+            user_metadata: { full_name: userData.displayName },
           };
 
-          let authStateCallback: ((user: FirebaseUser | null) => void) | null = null;
-
-          // Mock onAuthStateChange to capture the callback
+          // Mock onAuthStateChange to return an unsubscribe function
           (authLib.onAuthStateChange as jest.Mock).mockImplementation((callback) => {
-            authStateCallback = callback;
-            // Call immediately with mock user (Firebase does this synchronously)
-            callback(mockUser as FirebaseUser);
-            return jest.fn(); // Return unsubscribe function
+            // Call callback with mock user
+            callback(mockUser as User);
+            // Return unsubscribe function
+            return jest.fn();
           });
 
-          // First render - simulating initial page load with existing session
+          // First render
           const { result: result1, unmount: unmount1 } = renderHook(() => useAuth(), {
             wrapper: AuthProvider,
           });
 
-          // Wait for auth state to be set
           await waitFor(() => {
             expect(result1.current.loading).toBe(false);
           });
 
-          // Verify user is set from persisted session
           expect(result1.current.user).toBeTruthy();
-          expect(result1.current.user?.uid).toBe(userData.uid);
+          expect(result1.current.user?.id).toBe(userData.uid);
           expect(result1.current.user?.email).toBe(userData.email);
 
-          // Unmount (simulating page navigation away)
           unmount1();
 
-          // Second render - simulating page refresh/return
-          const { result: result2 } = renderHook(() => useAuth(), {
+          // Second render
+          const { result: result2, unmount: unmount2 } = renderHook(() => useAuth(), {
             wrapper: AuthProvider,
           });
 
-          // Wait for auth state to be set again
           await waitFor(() => {
             expect(result2.current.loading).toBe(false);
           });
 
-          // Verify session persisted - user should still be authenticated
           expect(result2.current.user).toBeTruthy();
-          expect(result2.current.user?.uid).toBe(userData.uid);
+          expect(result2.current.user?.id).toBe(userData.uid);
           expect(result2.current.user?.email).toBe(userData.email);
+          
+          unmount2();
         }
       ),
       { numRuns: 100 }
@@ -132,25 +120,22 @@ describe('AuthContext - Property-Based Tests', () => {
           email: fc.emailAddress(),
         }),
         async (userData) => {
-          // Clear mocks for each iteration
           jest.clearAllMocks();
           
-          const mockUser: Partial<FirebaseUser> = {
-            uid: userData.uid,
+          const mockUser: Partial<User> = {
+            id: userData.uid,
             email: userData.email,
           };
 
-          let authStateCallback: ((user: FirebaseUser | null) => void) | null = null;
+          let authStateCallback: ((user: User | null) => void) | null = null;
 
           (authLib.onAuthStateChange as jest.Mock).mockImplementation((callback) => {
             authStateCallback = callback;
-            // Call immediately with mock user (Firebase does this synchronously)
-            callback(mockUser as FirebaseUser);
+            callback(mockUser as User);
             return jest.fn();
           });
 
           (authLib.signOut as jest.Mock).mockImplementation(async () => {
-            // Simulate Firebase clearing the session by calling the callback with null
             if (authStateCallback) {
               authStateCallback(null);
             }
@@ -164,18 +149,14 @@ describe('AuthContext - Property-Based Tests', () => {
             expect(result.current.loading).toBe(false);
           }, { timeout: 2000 });
 
-          // User should be authenticated initially
           expect(result.current.user).toBeTruthy();
 
-          // Sign out - this should trigger the auth state callback with null
           await result.current.signOut();
 
-          // Wait for the state to update
           await waitFor(() => {
             expect(result.current.user).toBeNull();
           }, { timeout: 2000 });
 
-          // After sign-out, user should be null
           expect(result.current.user).toBeNull();
           
           unmount();

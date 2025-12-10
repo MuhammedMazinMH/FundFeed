@@ -1,10 +1,16 @@
-import { supabase } from './supabase';
+import { getSupabase, isSupabaseConfigured } from './supabase';
 import { FundraisingRound, User, IntroRequest } from '@/types';
 import type { Database } from '@/types/database';
+
+// Helper to check if database operations are available
+export const isDatabaseConfigured = (): boolean => {
+  return isSupabaseConfigured();
+};
 
 export const createFundraisingRound = async (
   roundData: Omit<FundraisingRound, 'id' | 'createdAt' | 'updatedAt' | 'followerCount' | 'introRequestCount'>
 ): Promise<string> => {
+  const supabase = getSupabase();
   const { data, error }: any = await supabase
     .from('fundraising_rounds')
     .insert({
@@ -27,6 +33,7 @@ export const createFundraisingRound = async (
 };
 
 export const getFundraisingRound = async (roundId: string): Promise<FundraisingRound | null> => {
+  const supabase = getSupabase();
   const { data, error }: any = await supabase
     .from('fundraising_rounds')
     .select('*')
@@ -58,6 +65,7 @@ export const getFundraisingRound = async (roundId: string): Promise<FundraisingR
 };
 
 export const getTrendingRounds = async (limitCount: number = 20): Promise<FundraisingRound[]> => {
+  const supabase = getSupabase();
   const { data, error }: any = await supabase
     .from('fundraising_rounds')
     .select('*')
@@ -89,6 +97,7 @@ export const updateFundraisingRound = async (
   roundId: string,
   updates: Partial<Omit<FundraisingRound, 'id' | 'createdAt'>>
 ): Promise<void> => {
+  const supabase = getSupabase();
   const dbUpdates: Record<string, any> = {};
 
   if (updates.companyName) dbUpdates.company_name = updates.companyName;
@@ -113,6 +122,7 @@ export const updateFundraisingRound = async (
 };
 
 export const deleteFundraisingRound = async (roundId: string): Promise<void> => {
+  const supabase = getSupabase();
   const { error }: any = await supabase
     .from('fundraising_rounds')
     .delete()
@@ -124,6 +134,7 @@ export const deleteFundraisingRound = async (roundId: string): Promise<void> => 
 };
 
 export const createOrUpdateUser = async (userId: string, userData: Omit<User, 'id'>): Promise<void> => {
+  const supabase = getSupabase();
   const { error }: any = await supabase
     .from('users')
     .upsert({
@@ -141,6 +152,7 @@ export const createOrUpdateUser = async (userId: string, userData: Omit<User, 'i
 };
 
 export const getUserProfile = async (userId: string): Promise<User | null> => {
+  const supabase = getSupabase();
   const { data, error }: any = await supabase
     .from('users')
     .select('*')
@@ -170,6 +182,7 @@ export const updateUserProfile = async (
   userId: string,
   updates: Partial<Omit<User, 'id' | 'createdAt'>>
 ): Promise<void> => {
+  const supabase = getSupabase();
   const dbUpdates: Record<string, any> = {};
 
   if (updates.email) dbUpdates.email = updates.email;
@@ -189,6 +202,7 @@ export const updateUserProfile = async (
 };
 
 export const followRound = async (userId: string, roundId: string): Promise<void> => {
+  const supabase = getSupabase();
   const { data: userData, error: userError }: any = await supabase
     .from('users')
     .select('followed_rounds')
@@ -233,6 +247,7 @@ export const followRound = async (userId: string, roundId: string): Promise<void
 };
 
 export const unfollowRound = async (userId: string, roundId: string): Promise<void> => {
+  const supabase = getSupabase();
   const { data: userData, error: userError }: any = await supabase
     .from('users')
     .select('followed_rounds')
@@ -279,6 +294,7 @@ export const unfollowRound = async (userId: string, roundId: string): Promise<vo
 export const createIntroRequest = async (
   requestData: Omit<IntroRequest, 'id' | 'createdAt' | 'status'>
 ): Promise<string> => {
+  const supabase = getSupabase();
   const { data: existingRequest, error: checkError }: any = await supabase
     .from('intro_requests')
     .select('id')
@@ -332,6 +348,7 @@ export const createIntroRequest = async (
 };
 
 export const getIntroRequestsForInvestor = async (investorId: string): Promise<IntroRequest[]> => {
+  const supabase = getSupabase();
   const { data, error }: any = await supabase
     .from('intro_requests')
     .select('*')
@@ -353,6 +370,7 @@ export const getIntroRequestsForInvestor = async (investorId: string): Promise<I
 };
 
 export const getIntroRequestsForRound = async (roundId: string): Promise<IntroRequest[]> => {
+  const supabase = getSupabase();
   const { data, error }: any = await supabase
     .from('intro_requests')
     .select('*')
@@ -374,6 +392,7 @@ export const getIntroRequestsForRound = async (roundId: string): Promise<IntroRe
 };
 
 export const hasIntroRequest = async (investorId: string, roundId: string): Promise<boolean> => {
+  const supabase = getSupabase();
   const { data, error }: any = await supabase
     .from('intro_requests')
     .select('id')
@@ -392,6 +411,7 @@ export const updateIntroRequestStatus = async (
   requestId: string,
   status: 'pending' | 'accepted' | 'declined'
 ): Promise<void> => {
+  const supabase = getSupabase();
   const { error }: any = await (supabase
     .from('intro_requests') as any)
     .update({ status })

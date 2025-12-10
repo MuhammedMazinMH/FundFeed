@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from './supabase';
+import { getSupabase, isSupabaseConfigured } from './supabase';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 export const isAuthConfigured = (): boolean => {
@@ -6,6 +6,7 @@ export const isAuthConfigured = (): boolean => {
 };
 
 export const signInWithEmail = async (email: string, password: string) => {
+  const supabase = getSupabase();
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -20,6 +21,7 @@ export const signInWithEmail = async (email: string, password: string) => {
 };
 
 export const signUpWithEmail = async (email: string, password: string) => {
+  const supabase = getSupabase();
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -34,6 +36,7 @@ export const signUpWithEmail = async (email: string, password: string) => {
 };
 
 export const signInWithGoogle = async () => {
+  const supabase = getSupabase();
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -50,6 +53,7 @@ export const signInWithGoogle = async () => {
 };
 
 export const signOut = async () => {
+  const supabase = getSupabase();
   const { error } = await supabase.auth.signOut();
 
   if (error) {
@@ -59,16 +63,16 @@ export const signOut = async () => {
 };
 
 export const onAuthStateChange = (callback: (user: SupabaseUser | null) => void) => {
+  const supabase = getSupabase();
   const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-    (async () => {
-      callback(session?.user ?? null);
-    })();
+    callback(session?.user ?? null);
   });
 
   return subscription.unsubscribe;
 };
 
 export const getCurrentUser = async () => {
+  const supabase = getSupabase();
   const { data: { user }, error } = await supabase.auth.getUser();
 
   if (error) {
