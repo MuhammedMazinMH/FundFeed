@@ -48,6 +48,9 @@ const nextConfig = {
       'lh3.googleusercontent.com',
     ],
   },
+  experimental: {
+    forceSwcTransforms: true,
+  },
 };
 
 module.exports = withPWA(nextConfig);
